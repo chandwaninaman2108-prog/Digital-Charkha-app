@@ -10,18 +10,18 @@
 <style>
 :root{
   --bg:#F2F3EE; --surface:#FFFFFF; --ink:#1E2747; --muted:#5E6680; --line:#DADDD3;
-  --leaf:#2F7A4B; --leaf-soft:#DCEBDF; --gold:#B7791F; --gold-soft:#F7E8C6; --indigo-soft:#E4E8F5;
+  --leaf:#2F7A4B; --on-leaf:#FFFFFF; --leaf-soft:#DCEBDF; --gold:#B7791F; --gold-soft:#F7E8C6; --indigo-soft:#E4E8F5;
   box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     --bg:#121626; --surface:#1B2036; --ink:#ECEEF6; --muted:#9AA2BD; --line:#2C3354;
-    --leaf:#6CC38A; --leaf-soft:#1E3A2B; --gold:#E8B24A; --gold-soft:#3B2F14; --indigo-soft:#252C4B; color-scheme:dark;
+    --leaf:#6CC38A; --leaf-soft:#1E3A2B; --gold:#E8B24A; --gold-soft:#3B2F14; --indigo-soft:#252C4B; --on-leaf:#0d1a12; color-scheme:dark;
   }
 }
 :root[data-theme="dark"]{
   --bg:#121626; --surface:#1B2036; --ink:#ECEEF6; --muted:#9AA2BD; --line:#2C3354;
-  --leaf:#6CC38A; --leaf-soft:#1E3A2B; --gold:#E8B24A; --gold-soft:#3B2F14; --indigo-soft:#252C4B; color-scheme:dark;
+  --leaf:#6CC38A; --leaf-soft:#1E3A2B; --gold:#E8B24A; --gold-soft:#3B2F14; --indigo-soft:#252C4B; --on-leaf:#0d1a12; color-scheme:dark;
 }
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 body{background:var(--bg);color:var(--ink);font-family:'DM Sans',system-ui,sans-serif;min-height:100vh}
@@ -33,9 +33,8 @@ body{background:var(--bg);color:var(--ink);font-family:'DM Sans',system-ui,sans-
 .chip-pending{background:var(--gold-soft);color:var(--gold)}
 .btn{border-radius:12px;padding:.5rem .9rem;font-weight:700;font-size:.875rem;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
 .btn:hover{background:var(--indigo-soft)}
-.btn-primary{background:var(--leaf);border-color:var(--leaf);color:#fff}
+.btn-primary{background:var(--leaf);border-color:var(--leaf);color:var(--on-leaf)}
 .btn-primary:hover{background:var(--leaf);filter:brightness(1.1)}
-:root[data-theme="dark"] .btn-primary,@media (prefers-color-scheme: dark){.btn-primary{color:#0d1a12}}
 .tab{padding:.45rem .9rem;border-radius:999px;font-weight:700;font-size:.875rem;cursor:pointer;border:1px solid transparent;color:var(--muted)}
 .tab[aria-selected="true"]{background:var(--ink);color:var(--bg)}
 .field{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:.55rem .8rem;color:var(--ink);width:100%}
@@ -48,6 +47,7 @@ body{background:var(--bg);color:var(--ink);font-family:'DM Sans',system-ui,sans-
 .day.today{border-color:var(--leaf);font-weight:700}
 .day.sel{background:var(--ink);color:var(--bg)}
 .dot{width:6px;height:6px;border-radius:50%}
+#taskList li:first-child{border-top:0!important}
 .task-done .ttext{text-decoration:line-through;color:var(--muted)}
 .spin{animation:spin 24s linear infinite;transform-origin:50% 50%}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -108,7 +108,7 @@ body{background:var(--bg);color:var(--ink);font-family:'DM Sans',system-ui,sans-
         <h2 id="viewTitle" class="display text-xl"></h2>
         <div id="viewCounts" class="flex gap-2"></div>
       </div>
-      <ul id="taskList" class="divide-y" style="--tw-divide-opacity:1"></ul>
+      <ul id="taskList"></ul>
       <div id="empty" class="muted text-sm py-6 hidden"></div>
       <div class="flex gap-2 mt-4">
         <label for="newTask" class="sr-only">New task</label>
@@ -251,7 +251,7 @@ body{background:var(--bg);color:var(--ink);font-family:'DM Sans',system-ui,sans-
     $("viewCounts").innerHTML = '<span class="chip chip-done">'+done+' completed</span><span class="chip chip-pending">'+(ts.length-done)+' pending</span>';
     var html="";
     ts.forEach(function(t){
-      html+='<li class="flex items-center gap-3 py-3 '+(t.done?'task-done':'')+'" style="border-color:var(--line)">'+
+      html+='<li class="flex items-center gap-3 py-3 '+(t.done?'task-done':'')+'" style="border-top:1px solid var(--line)">'+
         '<input type="checkbox" class="check" data-id="'+t.id+'" '+(t.done?'checked':'')+' aria-label="Mark '+esc(t.text)+' as done">'+
         '<span class="ttext flex-1 min-w-0 break-words">'+esc(t.text)+'</span>'+
         '<span class="chip '+(t.done?'chip-done':'chip-pending')+'">'+(t.done?'Completed':'Pending')+'</span>'+
@@ -295,7 +295,7 @@ body{background:var(--bg);color:var(--ink);font-family:'DM Sans',system-ui,sans-
     else if(t.id==="prevM"){ calMonth.setMonth(calMonth.getMonth()-1); renderCal(); }
     else if(t.id==="nextM"){ calMonth.setMonth(calMonth.getMonth()+1); renderCal(); }
     else if(t.id==="themeBtn"){
-      var root=document.documentElement, dark=getComputedStyle(root).getPropertyValue("--bg").trim()==="#121626";
+      var root=document.documentElement, cur=root.getAttribute("data-theme")||(window.matchMedia&&matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"), dark=cur==="dark";
       root.setAttribute("data-theme", dark?"light":"dark");
       try{localStorage.setItem("charkha.theme",dark?"light":"dark")}catch(err){}
     }
