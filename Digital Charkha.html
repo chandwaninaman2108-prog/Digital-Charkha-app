@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Digital Charkha – Sustainable Habit Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Young+Serif&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<style>
+:root{
+  --bg:#F2F3EE; --surface:#FFFFFF; --ink:#1E2747; --muted:#5E6680; --line:#DADDD3;
+  --leaf:#2F7A4B; --leaf-soft:#DCEBDF; --gold:#B7791F; --gold-soft:#F7E8C6; --indigo-soft:#E4E8F5;
+  box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#121626; --surface:#1B2036; --ink:#ECEEF6; --muted:#9AA2BD; --line:#2C3354;
+    --leaf:#6CC38A; --leaf-soft:#1E3A2B; --gold:#E8B24A; --gold-soft:#3B2F14; --indigo-soft:#252C4B; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121626; --surface:#1B2036; --ink:#ECEEF6; --muted:#9AA2BD; --line:#2C3354;
+  --leaf:#6CC38A; --leaf-soft:#1E3A2B; --gold:#E8B24A; --gold-soft:#3B2F14; --indigo-soft:#252C4B; color-scheme:dark;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{background:var(--bg);color:var(--ink);font-family:'DM Sans',system-ui,sans-serif;min-height:100vh}
+.display{font-family:'Young Serif',Georgia,serif;font-weight:400}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:18px}
+.muted{color:var(--muted)}
+.chip{border-radius:999px;padding:.15rem .6rem;font-size:.75rem;font-weight:700}
+.chip-done{background:var(--leaf-soft);color:var(--leaf)}
+.chip-pending{background:var(--gold-soft);color:var(--gold)}
+.btn{border-radius:12px;padding:.5rem .9rem;font-weight:700;font-size:.875rem;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.btn:hover{background:var(--indigo-soft)}
+.btn-primary{background:var(--leaf);border-color:var(--leaf);color:#fff}
+.btn-primary:hover{background:var(--leaf);filter:brightness(1.1)}
+:root[data-theme="dark"] .btn-primary,@media (prefers-color-scheme: dark){.btn-primary{color:#0d1a12}}
+.tab{padding:.45rem .9rem;border-radius:999px;font-weight:700;font-size:.875rem;cursor:pointer;border:1px solid transparent;color:var(--muted)}
+.tab[aria-selected="true"]{background:var(--ink);color:var(--bg)}
+.field{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:.55rem .8rem;color:var(--ink);width:100%}
+.field:focus,.btn:focus-visible,.tab:focus-visible,.day:focus-visible,input[type=checkbox]:focus-visible{outline:2px solid var(--leaf);outline-offset:2px}
+.check{appearance:none;width:1.4rem;height:1.4rem;border-radius:50%;border:2px solid var(--muted);display:grid;place-content:center;flex:none;cursor:pointer}
+.check:checked{background:var(--leaf);border-color:var(--leaf)}
+.check:checked::after{content:"";width:.4rem;height:.7rem;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg) translate(-1px,-1px)}
+.day{aspect-ratio:1;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:.85rem;cursor:pointer;border:1px solid transparent;background:transparent;color:var(--ink)}
+.day:hover{background:var(--indigo-soft)}
+.day.today{border-color:var(--leaf);font-weight:700}
+.day.sel{background:var(--ink);color:var(--bg)}
+.dot{width:6px;height:6px;border-radius:50%}
+.task-done .ttext{text-decoration:line-through;color:var(--muted)}
+.spin{animation:spin 24s linear infinite;transform-origin:50% 50%}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion: reduce){.spin{animation:none}}
+</style>
+</head>
+<body>
+<div class="max-w-6xl mx-auto px-4 py-6 sm:py-8">
+
+  <header class="flex items-start justify-between gap-4 mb-6">
+    <div>
+      <h1 class="display text-3xl sm:text-4xl leading-tight">Digital Charkha</h1>
+      <p id="dateLine" class="muted mt-1"></p>
+    </div>
+    <div class="flex items-center gap-2">
+      <div class="card px-3 py-2 text-center">
+        <div id="streak" class="display text-xl leading-none">0</div>
+        <div class="muted text-xs mt-1">day streak</div>
+      </div>
+      <button id="themeBtn" class="btn" aria-label="Switch light or dark theme">Theme</button>
+    </div>
+  </header>
+
+  <!-- Quote + progress wheel -->
+  <section class="grid gap-4 lg:grid-cols-3 mb-4">
+    <div class="card p-6 lg:col-span-2 flex flex-col justify-between" style="background:var(--indigo-soft)">
+      <p class="muted text-sm mb-3">Today’s thought</p>
+      <blockquote id="quote" class="display text-2xl sm:text-3xl leading-snug"></blockquote>
+      <p class="muted text-sm mt-4">A new line every day, spun fresh at midnight.</p>
+    </div>
+    <div class="card p-6 flex items-center gap-5">
+      <svg id="wheel" viewBox="0 0 120 120" class="w-28 h-28 flex-none" role="img" aria-label="Today’s progress"></svg>
+      <div>
+        <div id="progText" class="display text-2xl"></div>
+        <p id="progSub" class="muted text-sm mt-1"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Suggestions -->
+  <section class="card p-5 sm:p-6 mb-4">
+    <div class="flex items-baseline justify-between flex-wrap gap-2 mb-4">
+      <h2 class="display text-xl">Today’s sustainable picks</h2>
+      <span class="muted text-sm">Three small actions, chosen for today</span>
+    </div>
+    <div id="suggestions" class="grid gap-3 sm:grid-cols-3"></div>
+  </section>
+
+  <!-- Todo + calendar -->
+  <section class="grid gap-4 lg:grid-cols-5">
+    <div class="card p-5 sm:p-6 lg:col-span-3">
+      <div role="tablist" aria-label="Choose day" class="flex gap-1 mb-4 flex-wrap">
+        <button class="tab" role="tab" data-off="-1">Yesterday</button>
+        <button class="tab" role="tab" data-off="0">Today</button>
+        <button class="tab" role="tab" data-off="1">Tomorrow</button>
+      </div>
+      <div class="flex items-baseline justify-between gap-2 mb-3 flex-wrap">
+        <h2 id="viewTitle" class="display text-xl"></h2>
+        <div id="viewCounts" class="flex gap-2"></div>
+      </div>
+      <ul id="taskList" class="divide-y" style="--tw-divide-opacity:1"></ul>
+      <div id="empty" class="muted text-sm py-6 hidden"></div>
+      <div class="flex gap-2 mt-4">
+        <label for="newTask" class="sr-only">New task</label>
+        <input id="newTask" class="field" maxlength="80" placeholder="Add a task for this day">
+        <button id="addBtn" class="btn btn-primary flex-none">Add task</button>
+      </div>
+    </div>
+
+    <div class="card p-5 sm:p-6 lg:col-span-2 self-start">
+      <div class="flex items-center justify-between mb-3">
+        <button id="prevM" class="btn" aria-label="Previous month">‹</button>
+        <h2 id="monthTitle" class="display text-lg"></h2>
+        <button id="nextM" class="btn" aria-label="Next month">›</button>
+      </div>
+      <div class="grid grid-cols-7 gap-1 text-center muted text-xs mb-1" id="dow"></div>
+      <div class="grid grid-cols-7 gap-1" id="cal"></div>
+      <div class="flex gap-4 mt-4 text-xs muted flex-wrap">
+        <span class="flex items-center gap-1"><i class="dot" style="background:var(--leaf)"></i>All done</span>
+        <span class="flex items-center gap-1"><i class="dot" style="background:var(--gold)"></i>Pending</span>
+      </div>
+    </div>
+  </section>
+
+  <footer class="muted text-xs text-center mt-8">Your tasks stay on this device. Small threads, steady change.</footer>
+</div>
+
+<script>
+(function(){
+  /* ---------- data ---------- */
+  var QUOTES = [
+    "The planet doesn’t need a few perfect people. It needs many people trying, daily.",
+    "Every thread counts. So does every switch you turn off.",
+    "Choose the reusable thing once, and you choose it a thousand times.",
+    "Small habits are the quiet engine of a changed world.",
+    "Walk where you can, share what you can, waste what you must not.",
+    "A tree planted today is a promise kept to someone you’ll never meet.",
+    "Repair before you replace. Mend before you discard.",
+    "Slow living is not less living. It is more attention.",
+    "What you refuse to throw away, you learn to value.",
+    "Clean air is built one short trip at a time.",
+    "Be the person who brings the bag, the bottle, and the better idea.",
+    "Water saved today is a river left for tomorrow.",
+    "Consume with care, and the earth answers with abundance.",
+    "Change spins slowly, like a wheel, until it doesn’t stop."
+  ];
+  var ACTIVITIES = [
+    ["Carry a reusable bottle and bag","Skip single-use plastic for the whole day."],
+    ["Take a 5-minute shorter shower","Save up to 40 litres of water."],
+    ["Walk or cycle one short trip","Leave the vehicle parked for any trip under 2 km."],
+    ["Eat one fully plant-based meal","Try dal, sabzi and roti with local produce."],
+    ["Switch off idle devices","Unplug chargers and turn off standby lights."],
+    ["Segregate your waste","Keep wet, dry and recyclable waste apart."],
+    ["Mend one thing","Stitch, patch or fix something instead of replacing it."],
+    ["Plant or water a plant","Tend a pot, a tree or a community patch."],
+    ["Use natural light and air","Open the curtains and windows before reaching for a switch."],
+    ["Buy local and seasonal","Pick produce from a nearby vendor."],
+    ["Reuse water","Use leftover RO or washing water for plants."],
+    ["Go paperless for a day","Choose digital notes, bills and tickets."],
+    ["Share a ride","Carpool or take public transport today."],
+    ["Cook only what you will eat","Plan portions and finish leftovers."],
+    ["Compost kitchen scraps","Start a small bin for peels and tea leaves."],
+    ["Pick up 10 pieces of litter","Do a quick tidy of your street or park."],
+    ["Line-dry your clothes","Let the sun do the work of a dryer."],
+    ["Learn one eco fact","Read about a local species or water source and share it."]
+  ];
+  var DAYS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+
+  /* ---------- helpers ---------- */
+  function key(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+  function parse(k){var p=k.split("-");return new Date(+p[0],+p[1]-1,+p[2])}
+  function off(n){var d=new Date();d.setHours(12,0,0,0);d.setDate(d.getDate()+n);return d}
+  function dayNum(d){return Math.floor(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())/864e5)}
+  function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+  function $(id){return document.getElementById(id)}
+
+  var TODAY = key(off(0));
+  var tasks = [];
+  try{ tasks = JSON.parse(localStorage.getItem("charkha.tasks")||"[]"); if(!Array.isArray(tasks)) tasks=[]; }catch(e){ tasks=[]; }
+  function save(){ try{ localStorage.setItem("charkha.tasks",JSON.stringify(tasks)); }catch(e){} }
+
+  var view = TODAY;
+  var calMonth = parse(TODAY); calMonth.setDate(1);
+
+  /* ---------- daily picks (deterministic per date) ---------- */
+  function picks(dateKey){
+    var n = dayNum(parse(dateKey)), len = ACTIVITIES.length, out=[], step=7;
+    var start = ((n*5)%len+len)%len;
+    for(var i=0;i<3;i++) out.push((start+i*step)%len);
+    return out;
+  }
+  function quoteFor(dateKey){ return QUOTES[((dayNum(parse(dateKey)))%QUOTES.length+QUOTES.length)%QUOTES.length]; }
+
+  /* ---------- rendering ---------- */
+  function forDate(k){ return tasks.filter(function(t){return t.date===k}); }
+
+  function renderHeader(){
+    var d=off(0);
+    $("dateLine").textContent = d.toLocaleDateString(undefined,{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+    $("quote").textContent = "“"+quoteFor(TODAY)+"”";
+    var s=0, i=0;
+    var t0=forDate(TODAY); var startOff = (t0.length && t0.every(function(t){return t.done})) ? 0 : -1;
+    for(i=startOff;i>-400;i--){ var ts=forDate(key(off(i))); if(ts.length && ts.every(function(t){return t.done})) s++; else break; }
+    $("streak").textContent = s;
+  }
+
+  function renderWheel(){
+    var ts=forDate(TODAY), done=ts.filter(function(t){return t.done}).length, pct=ts.length?done/ts.length:0;
+    var r=46, c=2*Math.PI*r, spokes="";
+    for(var i=0;i<8;i++){var a=i*Math.PI/4;spokes+='<line x1="60" y1="60" x2="'+(60+Math.cos(a)*34).toFixed(1)+'" y2="'+(60+Math.sin(a)*34).toFixed(1)+'" stroke="var(--line)" stroke-width="2" stroke-linecap="round"/>';}
+    $("wheel").innerHTML =
+      '<circle cx="60" cy="60" r="'+r+'" fill="none" stroke="var(--line)" stroke-width="8"/>'+
+      '<circle cx="60" cy="60" r="'+r+'" fill="none" stroke="var(--leaf)" stroke-width="8" stroke-linecap="round" stroke-dasharray="'+c.toFixed(1)+'" stroke-dashoffset="'+(c*(1-pct)).toFixed(1)+'" transform="rotate(-90 60 60)"/>'+
+      '<g class="spin">'+spokes+'</g><circle cx="60" cy="60" r="5" fill="var(--ink)"/>';
+    $("progText").textContent = ts.length ? done+" of "+ts.length+" done" : "No tasks yet";
+    $("progSub").textContent = !ts.length ? "Add a pick below to start spinning." : done===ts.length ? "Every task is complete. Well spun." : (ts.length-done)+" still pending today.";
+  }
+
+  function renderSuggestions(){
+    var box=$("suggestions"), html="";
+    var added = forDate(TODAY).map(function(t){return t.text});
+    picks(TODAY).forEach(function(ix){
+      var a=ACTIVITIES[ix], has=added.indexOf(a[0])>-1;
+      html+='<div class="rounded-2xl p-4 flex flex-col gap-3" style="background:var(--bg);border:1px solid var(--line)">'+
+        '<div><h3 class="font-bold">'+esc(a[0])+'</h3><p class="muted text-sm mt-1">'+esc(a[1])+'</p></div>'+
+        '<button class="btn '+(has?'':'btn-primary')+' mt-auto" data-add="'+ix+'" '+(has?'disabled style="opacity:.6;cursor:default"':'')+'>'+(has?'Added to today':'Add to today')+'</button></div>';
+    });
+    box.innerHTML=html;
+  }
+
+  function renderTabs(){
+    document.querySelectorAll(".tab").forEach(function(b){
+      b.setAttribute("aria-selected", key(off(+b.dataset.off))===view ? "true":"false");
+    });
+  }
+
+  function renderList(){
+    var ts=forDate(view), done=ts.filter(function(t){return t.done}).length;
+    var rel = {"-1":"Yesterday","0":"Today","1":"Tomorrow"}[String(Math.round((dayNum(parse(view))-dayNum(parse(TODAY)))))];
+    $("viewTitle").textContent = (rel?rel+" · ":"")+parse(view).toLocaleDateString(undefined,{day:"numeric",month:"short"});
+    $("viewCounts").innerHTML = '<span class="chip chip-done">'+done+' completed</span><span class="chip chip-pending">'+(ts.length-done)+' pending</span>';
+    var html="";
+    ts.forEach(function(t){
+      html+='<li class="flex items-center gap-3 py-3 '+(t.done?'task-done':'')+'" style="border-color:var(--line)">'+
+        '<input type="checkbox" class="check" data-id="'+t.id+'" '+(t.done?'checked':'')+' aria-label="Mark '+esc(t.text)+' as done">'+
+        '<span class="ttext flex-1 min-w-0 break-words">'+esc(t.text)+'</span>'+
+        '<span class="chip '+(t.done?'chip-done':'chip-pending')+'">'+(t.done?'Completed':'Pending')+'</span>'+
+        '<button class="btn" style="padding:.25rem .6rem" data-del="'+t.id+'" aria-label="Delete '+esc(t.text)+'">✕</button></li>';
+    });
+    $("taskList").innerHTML=html;
+    var e=$("empty");
+    e.classList.toggle("hidden", ts.length>0);
+    e.textContent = view<TODAY ? "Nothing was logged for this day." : "Nothing planned yet. Add a task or pick one of today’s suggestions.";
+  }
+
+  function renderCal(){
+    var y=calMonth.getFullYear(), m=calMonth.getMonth();
+    $("monthTitle").textContent = calMonth.toLocaleDateString(undefined,{month:"long",year:"numeric"});
+    $("dow").innerHTML = DAYS.map(function(d){return "<div>"+d+"</div>"}).join("");
+    var first=new Date(y,m,1).getDay(), count=new Date(y,m+1,0).getDate(), html="", i;
+    for(i=0;i<first;i++) html+="<div></div>";
+    for(i=1;i<=count;i++){
+      var k=key(new Date(y,m,i)), ts=forDate(k), dot="";
+      if(ts.length) dot='<i class="dot" style="background:'+(ts.every(function(t){return t.done})?'var(--leaf)':'var(--gold)')+'"></i>';
+      html+='<button class="day'+(k===TODAY?' today':'')+(k===view?' sel':'')+'" data-day="'+k+'" aria-label="'+parse(k).toDateString()+'">'+i+(dot||'<i class="dot" style="background:transparent"></i>')+'</button>';
+    }
+    $("cal").innerHTML=html;
+  }
+
+  function renderAll(){ renderHeader(); renderWheel(); renderSuggestions(); renderTabs(); renderList(); renderCal(); }
+
+  /* ---------- events ---------- */
+  function addTask(text,date){
+    text=text.trim(); if(!text) return;
+    tasks.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),date:date,text:text,done:false});
+    save(); renderAll();
+  }
+  document.addEventListener("click",function(e){
+    var t=e.target.closest("[data-add],[data-del],[data-day],.tab,#addBtn,#prevM,#nextM,#themeBtn"); if(!t) return;
+    if(t.dataset.add!==undefined){ addTask(ACTIVITIES[+t.dataset.add][0],TODAY); view=TODAY; calMonth=parse(TODAY);calMonth.setDate(1); renderAll(); }
+    else if(t.dataset.del){ tasks=tasks.filter(function(x){return x.id!==t.dataset.del}); save(); renderAll(); }
+    else if(t.dataset.day){ view=t.dataset.day; renderAll(); }
+    else if(t.classList.contains("tab")){ view=key(off(+t.dataset.off)); calMonth=parse(view); calMonth.setDate(1); renderAll(); }
+    else if(t.id==="addBtn"){ addTask($("newTask").value,view); $("newTask").value=""; $("newTask").focus(); }
+    else if(t.id==="prevM"){ calMonth.setMonth(calMonth.getMonth()-1); renderCal(); }
+    else if(t.id==="nextM"){ calMonth.setMonth(calMonth.getMonth()+1); renderCal(); }
+    else if(t.id==="themeBtn"){
+      var root=document.documentElement, dark=getComputedStyle(root).getPropertyValue("--bg").trim()==="#121626";
+      root.setAttribute("data-theme", dark?"light":"dark");
+      try{localStorage.setItem("charkha.theme",dark?"light":"dark")}catch(err){}
+    }
+  });
+  document.addEventListener("change",function(e){
+    if(e.target.dataset.id){ var t=tasks.find(function(x){return x.id===e.target.dataset.id}); if(t){t.done=e.target.checked; save(); renderAll();} }
+  });
+  $("newTask").addEventListener("keydown",function(e){ if(e.key==="Enter"){ addTask(this.value,view); this.value=""; }});
+
+  try{ var th=localStorage.getItem("charkha.theme"); if(th) document.documentElement.setAttribute("data-theme",th); }catch(e){}
+
+  /* roll over at midnight */
+  setInterval(function(){ var k=key(off(0)); if(k!==TODAY){ TODAY=k; view=k; calMonth=parse(k); calMonth.setDate(1); renderAll(); } },60000);
+
+  renderAll();
+})();
+</script>
+</body>
+</html>
